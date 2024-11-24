@@ -1,6 +1,7 @@
 import csv
 from sqlalchemy import create_engine, Column, String, Float, Integer, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
+from datetime import datetime
 
 # Define SQLAlchemy base
 Base = declarative_base()
@@ -75,14 +76,16 @@ def get_in():
 
 
 def get_data(strike_value = 480,    option_type_value = 'P',    expiration_date = '2024-01-02',output_file="output.csv",file_mode='w'):
-
+    start_time = datetime(2024, 1,17, 9, 00, 0)
+    end_time = datetime(2024, 1,  17, 16, 00, 0)
     # Query the database
     results = (
         session.query(OptionTrade)
         .filter(
             OptionTrade.strike == strike_value,
             OptionTrade.option_type == option_type_value,
-            OptionTrade.expiration == expiration_date
+            OptionTrade.expiration == expiration_date,
+            OptionTrade.quote_datetime.between(start_time, end_time)
         )
         .order_by(OptionTrade.quote_datetime)
         .all()
@@ -96,7 +99,9 @@ def get_data(strike_value = 480,    option_type_value = 'P',    expiration_date 
             f"Option Type: {trade.option_type}, "
             f"Trade Size: {trade.trade_size}, "
             f"expiration_date: {trade.expiration}, "
-            f"Trade Price: {trade.trade_price}"
+            f"Trade Price: {trade.trade_price}",
+            f"XSP: {trade.underlying_bid}"
+            
         )
      # Write results to a CSV file
     with open(output_file, mode=file_mode, newline='') as csvfile:
@@ -105,64 +110,30 @@ def get_data(strike_value = 480,    option_type_value = 'P',    expiration_date 
         writer.writerow([
             "Quote Datetime",
             "Strike",
-            "Option Type",
+            "exp",
             "Trade Size",
             "Trade Price",
+            "XSP",
         ])
         
         # Write data rows
         for trade in results:
             writer.writerow([
                 trade.quote_datetime,
-                trade.strike,
-                trade.option_type,
+                f"{trade.option_type}{trade.strike}  ",
+                trade.expiration ,
                 trade.trade_size,
                 trade.trade_price,
+                trade.underlying_bid,
             ])
     
     print(f"Data written to {output_file}")
 
 
-get_data(strike_value = 475,    option_type_value = 'P',    expiration_date = '2024-01-31',file_mode='w')
-get_data(strike_value = 467,    option_type_value = 'P',    expiration_date = '2024-01-31',file_mode='a')
+get_data(strike_value = 480,    option_type_value = 'P',    expiration_date = '2024-01-17',file_mode='w')
+get_data(strike_value = 479,    option_type_value = 'P',    expiration_date = '2024-01-22',file_mode='a')
+get_data(strike_value = 470,    option_type_value = 'P',    expiration_date = '2024-01-22',file_mode='a')
+# get_data(strike_value = 465,    option_type_value = 'P',    expiration_date = '2024-01-17',file_mode='a')
+# get_data(strike_value = 476,    option_type_value = 'P',    expiration_date = '2024-01-09',file_mode='a')
 
 
-
-
-# def get_rows_by_criteria(date, strike, option_type):
-#     """
-#     Fetch rows from the database based on date, strike, and option type.
-
-#     Args:
-#         date (str): The expiration date (e.g., '2024-01-02').
-#         strike (float): The strike price (e.g., 480.0).
-#         option_type (str): The option type ('C' or 'P').
-
-#     Returns:
-#         list: A list of rows that match the criteria.
-#     """
-#     results = (
-#         session.query(OptionTrade)
-#         .filter(
-#             OptionTrade.expiration == date,
-#             OptionTrade.strike == strike,
-#             OptionTrade.option_type == option_type
-#         )
-#         .order_by(OptionTrade.quote_datetime)
-#         .all()
-#     )
-#     return results
-
-
-# # Example Usage
-# rows = get_rows_by_criteria('2024-01-31', 480.0, 'P')
-
-# # Print the fetched rows
-# for row in rows:
-#     print(
-#         f"Quote Datetime: {row.quote_datetime}, "
-#         f"Strike: {row.strike}, "
-#         f"Option Type: {row.option_type}, "
-#         f"Trade Size: {row.trade_size}, "
-#         f"Trade Price: {row.trade_price}"
-#     )
